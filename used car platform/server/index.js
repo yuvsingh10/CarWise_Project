@@ -10,12 +10,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// MongoDB connection with retry logic
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    console.log('✅ MongoDB connected successfully');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err.message);
+    console.log('⏳ Retrying in 5 seconds...');
+    setTimeout(connectDB, 5000);
+  }
+};
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+connectDB();
 
 
 app.use('/api/auth', authRoutes);

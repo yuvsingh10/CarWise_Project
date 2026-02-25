@@ -23,57 +23,78 @@ const MyCars = () => {
   }, [navigate]);
 
   useEffect(() => {
-    const storedCars = JSON.parse(localStorage.getItem('cars')) || [];
-    setCars(storedCars);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Fetch all cars from API
+    fetch('http://localhost:5000/api/cars', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setCars(Array.isArray(data) ? data : []))
+      .catch(err => {
+        console.error('Error fetching cars:', err);
+        setCars([]);
+      });
   }, []);
 
   if (!user) return <p>Loading…</p>;
 
-  const myCars = cars.filter(car => car.registeredEmail === user.email);
+  const myCars = cars.filter(car => car.ownerId === user.id);
 
   return (
     <div
       style={{
-        minHeight: '100vh',
-        backgroundImage: 'url("/BG2.jpg")',
+        height: '100vh',
+        backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("/BG2.jpg")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        padding: 30,
+        backgroundAttachment: 'fixed',
+        padding: 0,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        overflow: 'auto',
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: 1000,
-          background: 'rgba(255,255,255,0.95)',
-          borderRadius: 16,
-          padding: 30,
-          boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
-          backdropFilter: 'blur(6px)',
+          background: 'rgba(0, 0, 0, 0.15)',
+          borderRadius: 20,
+          padding: 35,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(20px)',
         }}
       >
         <button
           onClick={() => navigate(-1)}
           style={{
             marginBottom: 20,
-            padding: '8px 16px',
-            backgroundColor: '#6c757d',
+            padding: '10px 20px',
+            backgroundColor: '#64b5f6',
             color: '#fff',
             border: 'none',
-            borderRadius: 6,
+            borderRadius: 8,
             cursor: 'pointer',
             fontWeight: 'bold',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#42a5f5';
+            e.currentTarget.style.transform = 'translateY(-3px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#64b5f6';
+            e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
           Back
         </button>
 
-        <h1 style={{ textAlign: 'center', color: '#007BFF' }}>My Cars for Sale</h1>
+        <h1 style={{ textAlign: 'center', color: '#64b5f6', fontSize: '2rem', fontWeight: '900' }}>My Cars for Sale</h1>
         {myCars.length === 0 && (
-          <p style={{ textAlign: 'center', marginTop: 20 }}>You haven't listed any cars yet.</p>
+          <p style={{ textAlign: 'center', marginTop: 20, color: 'rgba(255, 255, 255, 0.8)' }}>You haven't listed any cars yet.</p>
         )}
 
         <div
@@ -91,12 +112,21 @@ const MyCars = () => {
               onClick={() => navigate('/car-details', { state: car })}
               style={{
                 flex: '1 1 250px',
-                background: '#fff',
-                borderRadius: 10,
+                background: 'transparent',
+                borderRadius: 12,
                 padding: 20,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
                 cursor: 'pointer',
                 textAlign: 'center',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.transform = 'translateY(-5px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
               <img
@@ -110,10 +140,9 @@ const MyCars = () => {
                   marginBottom: 10,
                 }}
               />
-              <h3 style={{ margin: '10px 0' }}>🚗 {car.name}</h3>
-              <p style={{ fontWeight: 600, color: '#007BFF' }}>{car.price}</p>
-              <p><b>Registered Email:</b> {car.registeredEmail}</p>
-              <p><b>Owner Phone:</b> {car.ownerPhone}</p>
+              <h3 style={{ margin: '10px 0', color: '#64b5f6', fontWeight: '700' }}>🚗 {car.name}</h3>
+              <p style={{ fontWeight: 600, color: '#90caf9', fontSize: '16px' }}>{car.price}</p>
+              <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}><b style={{ color: '#64b5f6' }}>Phone:</b> {car.ownerPhone}</p>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -121,17 +150,24 @@ const MyCars = () => {
                 }}
                 style={{
                   marginTop: 8,
-                  padding: '6px 12px',
-                  background: '#ffc107',
+                  padding: '8px 14px',
+                  background: '#64b5f6',
+                  color: '#fff',
                   border: 'none',
-                  borderRadius: 20,
+                  borderRadius: 6,
                   cursor: 'pointer',
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 600,
                   marginRight: 6,
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#42a5f5';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#64b5f6';
+                }}
               >
-                Edit
+                ✏️ Edit
               </button>
               <button
                 onClick={(e) => {
@@ -144,17 +180,23 @@ const MyCars = () => {
                 }}
                 style={{
                   marginTop: 8,
-                  padding: '6px 12px',
-                  background: '#dc3545',
-                  border: 'none',
-                  borderRadius: 20,
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  fontWeight: 600,
+                  padding: '8px 14px',
+                  background: '#f44336',
                   color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#ef5350';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f44336';
                 }}
               >
-                Delete
+                🗑️ Delete
               </button>
             </div>
           ))}

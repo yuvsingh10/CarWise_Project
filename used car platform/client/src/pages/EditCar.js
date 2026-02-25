@@ -8,17 +8,15 @@ const EditCar = () => {
 
   const [form, setForm] = useState({
     name: '',
-    ownerName: '',
     price: '',
     ownerPhone: '',
-    registeredEmail: '',
     modelYear: '',
     kmsDriven: '',
     fuelType: '',
     transmission: '',
     seats: '',
-    engine: '',
     ownership: '',
+    description: '',
     photo: null,
   });
 
@@ -26,21 +24,18 @@ const EditCar = () => {
     if (car) {
       setForm({
         name: car.name || '',
-        ownerName: car.ownerName || '',
         price: car.price || '',
         ownerPhone: car.ownerPhone || '',
-        registeredEmail: car.registeredEmail || '',
         modelYear: car.modelYear || '',
         kmsDriven: car.kmsDriven || '',
         fuelType: car.fuelType || '',
         transmission: car.transmission || '',
         seats: car.seats || '',
-        engine: car.engine || '',
         ownership: car.ownership || '',
+        description: car.description || '',
         photo: car.photo || null,
       });
     } else {
-      
       navigate('/dashboard');
     }
   }, [car, navigate]);
@@ -66,67 +61,119 @@ const EditCar = () => {
 
     if (
       !form.name ||
-      !form.ownerName ||
       !form.price ||
       !form.ownerPhone ||
-      !form.registeredEmail ||
       !form.modelYear ||
       !form.kmsDriven ||
       !form.fuelType ||
       !form.transmission ||
       !form.seats ||
-      !form.engine ||
       !form.ownership
     ) {
       alert('Please fill all required fields.');
       return;
     }
 
-    const storedCars = JSON.parse(localStorage.getItem('cars')) || [];
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login first.');
+      return;
+    }
 
-    const updatedCars = storedCars.map((c) =>
-      c.id === car.id
-        ? {
-            ...c,
-            name: form.name,
-            ownerName: form.ownerName,
-            price: form.price,
-            ownerPhone: form.ownerPhone,
-            registeredEmail: form.registeredEmail,
-            modelYear: form.modelYear,
-            kmsDriven: form.kmsDriven,
-            fuelType: form.fuelType,
-            transmission: form.transmission,
-            seats: form.seats,
-            engine: form.engine,
-            ownership: form.ownership,
-            photo: form.photo,
-          }
-        : c
-    );
+    // Prepare update data - convert string values to numbers
+    const updateData = {
+      name: form.name,
+      price: parseFloat(form.price),
+      modelYear: parseInt(form.modelYear),
+      kmsDriven: parseInt(form.kmsDriven),
+      fuelType: form.fuelType,
+      transmission: form.transmission,
+      seats: parseInt(form.seats),
+      ownership: parseInt(form.ownership),
+      photo: form.photo || '',
+      description: form.description || '',
+    };
 
-    localStorage.setItem('cars', JSON.stringify(updatedCars));
+    // Send to API
+    fetch(`http://localhost:5000/api/cars/${car._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(updateData),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.message?.includes('✅')) {
+          alert('Car updated successfully!');
+          navigate('/my-cars');
+        } else {
+          alert(`Error: ${data.message}`);
+        }
+      })
+      .catch((err) => {
+        console.error('Error:', err);
+        alert('Failed to update car. Please try again.');
+      });
+  };
 
-    alert('Car details updated successfully!');
-    navigate('/dashboard');
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 14px',
+    marginBottom: 15,
+    borderRadius: 8,
+    border: '2px solid rgba(100, 181, 246, 0.3)',
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: '#fff',
+    transition: 'all 0.3s',
+  };
+
+  const submitBtnStyle = {
+    width: '100%',
+    padding: 14,
+    backgroundColor: '#64b5f6',
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+    boxShadow: '0 4px 15px rgba(100, 181, 246, 0.4)',
+    transition: 'all 0.3s ease',
+    transform: 'translateY(0)',
   };
 
   return (
     <div
       style={{
-        maxWidth: 700,
-        margin: '40px auto',
-        padding: 20,
-        background: '#fff',
-        borderRadius: 8,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        minHeight: '100vh',
+        backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("/BG2.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        padding: 40,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
-      <h2 style={{ textAlign: 'center', marginBottom: 20 }}>Edit Car Details</h2>
+      <div
+        style={{
+          maxWidth: 700,
+          width: '100%',
+          padding: 35,
+          background: 'rgba(0, 0, 0, 0.15)',
+          borderRadius: 20,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(20px)',
+        }}
+      >
+        <h2 style={{ textAlign: 'center', marginBottom: 20, color: '#64b5f6', fontWeight: '900', fontSize: '1.8rem' }}>Edit Car Details</h2>
       <form onSubmit={handleSubmit}>
         
-        <label>
-          Car Name<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Car Name<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <input
           type="text"
@@ -138,23 +185,8 @@ const EditCar = () => {
           style={inputStyle}
         />
 
-        
-        <label>
-          Owner Name<span style={{ color: 'red' }}>*</span>
-        </label>
-        <input
-          type="text"
-          name="ownerName"
-          value={form.ownerName}
-          onChange={handleChange}
-          placeholder="John Doe"
-          required
-          style={inputStyle}
-        />
-
-        
-        <label>
-          Price (₹)<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Price (₹)<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <input
           type="number"
@@ -167,9 +199,8 @@ const EditCar = () => {
           style={inputStyle}
         />
 
-        
-        <label>
-          Owner Phone<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Owner Phone<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <input
           type="tel"
@@ -184,22 +215,8 @@ const EditCar = () => {
         />
 
         
-        <label>
-          Registered Email<span style={{ color: 'red' }}>*</span>
-        </label>
-        <input
-          type="email"
-          name="registeredEmail"
-          value={form.registeredEmail}
-          onChange={handleChange}
-          placeholder="example@example.com"
-          required
-          style={inputStyle}
-        />
-
-        
-        <label>
-          Model Year<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Model Year<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <input
           type="number"
@@ -214,8 +231,8 @@ const EditCar = () => {
         />
 
         
-        <label>
-          Kilometers Driven<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Kilometers Driven<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <input
           type="number"
@@ -229,8 +246,8 @@ const EditCar = () => {
         />
 
         
-        <label>
-          Fuel Type<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Fuel Type<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <select
           name="fuelType"
@@ -247,8 +264,8 @@ const EditCar = () => {
         </select>
 
         
-        <label>
-          Transmission<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Transmission<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <select
           name="transmission"
@@ -263,8 +280,8 @@ const EditCar = () => {
         </select>
 
        
-        <label>
-          Number of Seats<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6' }}>
+          Number of Seats<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <input
           type="number"
@@ -277,23 +294,8 @@ const EditCar = () => {
           style={inputStyle}
         />
 
-        
-        <label>
-          Engine Capacity<span style={{ color: 'red' }}>*</span>
-        </label>
-        <input
-          type="text"
-          name="engine"
-          value={form.engine}
-          onChange={handleChange}
-          placeholder="1498 cc"
-          required
-          style={inputStyle}
-        />
-
-        
-        <label>
-          Ownership (Number of owners)<span style={{ color: 'red' }}>*</span>
+        <label style={{ color: '#64b5f6' }}>
+          Ownership (Number of owners)<span style={{ color: '#ef5350' }}>*</span>
         </label>
         <input
           type="number"
@@ -306,8 +308,17 @@ const EditCar = () => {
           style={inputStyle}
         />
 
+        <label style={{ color: '#64b5f6' }}>Description (Optional)</label>
+        <textarea
+          name="description"
+          value={form.description}
+          onChange={handleChange}
+          placeholder="Add details about the car..."
+          style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
+        />
+
         
-        <label>Upload Photo (jpg/jpeg/png)</label>
+        <label style={{ color: '#64b5f6' }}>Upload Photo (jpg/jpeg/png)</label>
         <input
           type="file"
           accept="image/jpeg,image/jpg,image/png"
@@ -320,36 +331,30 @@ const EditCar = () => {
           <img
             src={form.photo}
             alt="Preview"
-            style={{ width: '100%', maxHeight: 250, objectFit: 'contain', marginBottom: 15, borderRadius: 8, border: '1px solid #ccc' }}
+            style={{ width: '100%', maxHeight: 250, objectFit: 'contain', marginBottom: 15, borderRadius: 8, border: '2px solid #64b5f6' }}
           />
         )}
 
-        <button type="submit" style={submitBtnStyle}>
+        <button 
+          type="submit" 
+          style={submitBtnStyle}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = '#42a5f5';
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 6px 20px rgba(100, 181, 246, 0.6)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = '#64b5f6';
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = '0 4px 15px rgba(100, 181, 246, 0.4)';
+          }}
+        >
           Update Car Details
         </button>
       </form>
     </div>
+    </div>
   );
-};
-
-const inputStyle = {
-  width: '100%',
-  padding: 10,
-  marginBottom: 15,
-  borderRadius: 4,
-  border: '1px solid #ccc',
-};
-
-const submitBtnStyle = {
-  width: '100%',
-  padding: 14,
-  backgroundColor: '#007BFF',
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: 'bold',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer',
 };
 
 export default EditCar;

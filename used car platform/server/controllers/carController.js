@@ -1,4 +1,16 @@
 const Car = require('../models/Car');
+const User = require('../models/User');
+const {
+  validatePrice,
+  validateModelYear,
+  validateKmsDriven,
+  validateOwnership,
+  validateSeats,
+  validateFuelType,
+  validateTransmission,
+  validateDescription,
+  sanitizeString,
+} = require('../utils/validators');
 
 
 exports.getAllCars = async (_req, res) => {
@@ -6,22 +18,110 @@ exports.getAllCars = async (_req, res) => {
     const cars = await Car.find().sort({ createdAt: -1 });
     res.json(cars);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to fetch cars' });
+    console.error('Get all cars error:', err.message);
+    res.status(500).json({ message: '❌ Failed to load cars. Please refresh and try again.' });
   }
 };
 
 
 exports.createCar = async (req, res) => {
   try {
+    const { name, price, modelYear, fuelType, transmission, kmsDriven, ownership, seats, description, photo } = req.body;
+
+    // Validate name
+    const nameValidation = validateName(name);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ message: `❌ ${nameValidation.error}` });
+    }
+
+    // Validate price
+    const priceValidation = validatePrice(price);
+    if (!priceValidation.valid) {
+      return res.status(400).json({ message: `❌ ${priceValidation.error}` });
+    }
+
+    // Validate model year
+    const yearValidation = validateModelYear(modelYear);
+    if (!yearValidation.valid) {
+      return res.status(400).json({ message: `❌ ${yearValidation.error}` });
+    }
+
+    // Validate fuel type
+    const fuelValidation = validateFuelType(fuelType);
+    if (!fuelValidation.valid) {
+      return res.status(400).json({ message: `❌ ${fuelValidation.error}` });
+    }
+
+    // Validate transmission
+    const transmissionValidation = validateTransmission(transmission);
+    if (!transmissionValidation.valid) {
+      return res.status(400).json({ message: `❌ ${transmissionValidation.error}` });
+    }
+
+    // Validate KMs driven
+    const kmsValidation = validateKmsDriven(kmsDriven);
+    if (!kmsValidation.valid) {
+      return res.status(400).json({ message: `❌ ${kmsValidation.error}` });
+    }
+
+    // Validate ownership
+    const ownershipValidation = validateOwnership(ownership);
+    if (!ownershipValidation.valid) {
+      return res.status(400).json({ message: `❌ ${ownershipValidation.error}` });
+    }
+
+    // Validate seats
+    const seatsValidation = validateSeats(seats);
+    if (!seatsValidation.valid) {
+      return res.status(400).json({ message: `❌ ${seatsValidation.error}` });
+    }
+
+    // Validate description (optional)
+    let descriptionValue = description || '';
+    if (description) {
+      const descValidation = validateDescription(description);
+      if (!descValidation.valid) {
+        return res.status(400).json({ message: `❌ ${descValidation.error}` });
+      }
+      descriptionValue = descValidation.value;
+    }
+
+    // Sanitize string fields
+    const sanitizedName = sanitizeString(nameValidation.value);
+    const sanitizedDescription = sanitizeString(descriptionValue);
+
     const newCar = await Car.create({
-      ...req.body,
-      registeredEmail: req.user.email,   // guarantee owner
+      name: sanitizedName,
+      price: priceValidation.value,
+      photo: photo || '',
+      ownerId: req.user.id,
+      ownerPhone: req.user.phone,
+      modelYear: yearValidation.value,
+      fuelType: fuelValidation.value,
+      transmission: transmissionValidation.value,
+      kmsDriven: kmsValidation.value,
+      ownership: ownershipValidation.value,
+      seats: seatsValidation.value,
+      description: sanitizedDescription,
     });
-    res.status(201).json(newCar);
+
+    // Add car to user's carListings
+    await User.findByIdAndUpdate(req.user.id, {
+      $push: { carListings: newCar._id }
+    });
+
+    console.log('✅ Car created successfully:', newCar._id);
+    res.status(201).json({ message: '✅ Car listed successfully!', car: newCar });
   } catch (err) {
-    console.error(err);
-    res.status(400).json({ message: 'Failed to create car' });
+    console.error('Create car error:', err.message);
+
+    // Handle validation errors from schema
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ message: `❌ ${messages.join(', ')}` });
+    }
+
+    res.status(500).json({ message: '❌ Failed to create car listing. Please try again.' });
   }
 };
 
@@ -29,16 +129,103 @@ exports.createCar = async (req, res) => {
 exports.updateCar = async (req, res) => {
   try {
     const car = await Car.findById(req.params.id);
-    if (!car) return res.status(404).json({ message: 'Car not found' });
+    if (!car) {
+      return res.status(404).json({ message: '❌ Car not found. It may have been deleted.' });
+    }
 
-    if (car.registeredEmail !== req.user.email)
-      return res.status(403).json({ message: 'Not authorized' });
+    if (car.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ message: '❌ You can only edit your own car listings.' });
+    }
 
-    const updated = await Car.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(updated);
+    const updateData = { ...req.body };
+
+    // Validate fields if they're being updated
+    if (updateData.name !== undefined) {
+      const nameValidation = validateName(updateData.name);
+      if (!nameValidation.valid) {
+        return res.status(400).json({ message: `❌ ${nameValidation.error}` });
+      }
+      updateData.name = sanitizeString(nameValidation.value);
+    }
+
+    if (updateData.price !== undefined) {
+      const priceValidation = validatePrice(updateData.price);
+      if (!priceValidation.valid) {
+        return res.status(400).json({ message: `❌ ${priceValidation.error}` });
+      }
+      updateData.price = priceValidation.value;
+    }
+
+    if (updateData.modelYear !== undefined) {
+      const yearValidation = validateModelYear(updateData.modelYear);
+      if (!yearValidation.valid) {
+        return res.status(400).json({ message: `❌ ${yearValidation.error}` });
+      }
+      updateData.modelYear = yearValidation.value;
+    }
+
+    if (updateData.fuelType !== undefined) {
+      const fuelValidation = validateFuelType(updateData.fuelType);
+      if (!fuelValidation.valid) {
+        return res.status(400).json({ message: `❌ ${fuelValidation.error}` });
+      }
+      updateData.fuelType = fuelValidation.value;
+    }
+
+    if (updateData.transmission !== undefined) {
+      const transmissionValidation = validateTransmission(updateData.transmission);
+      if (!transmissionValidation.valid) {
+        return res.status(400).json({ message: `❌ ${transmissionValidation.error}` });
+      }
+      updateData.transmission = transmissionValidation.value;
+    }
+
+    if (updateData.kmsDriven !== undefined) {
+      const kmsValidation = validateKmsDriven(updateData.kmsDriven);
+      if (!kmsValidation.valid) {
+        return res.status(400).json({ message: `❌ ${kmsValidation.error}` });
+      }
+      updateData.kmsDriven = kmsValidation.value;
+    }
+
+    if (updateData.ownership !== undefined) {
+      const ownershipValidation = validateOwnership(updateData.ownership);
+      if (!ownershipValidation.valid) {
+        return res.status(400).json({ message: `❌ ${ownershipValidation.error}` });
+      }
+      updateData.ownership = ownershipValidation.value;
+    }
+
+    if (updateData.seats !== undefined) {
+      const seatsValidation = validateSeats(updateData.seats);
+      if (!seatsValidation.valid) {
+        return res.status(400).json({ message: `❌ ${seatsValidation.error}` });
+      }
+      updateData.seats = seatsValidation.value;
+    }
+
+    if (updateData.description !== undefined) {
+      if (updateData.description) {
+        const descValidation = validateDescription(updateData.description);
+        if (!descValidation.valid) {
+          return res.status(400).json({ message: `❌ ${descValidation.error}` });
+        }
+        updateData.description = sanitizeString(descValidation.value);
+      }
+    }
+
+    const updated = await Car.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    console.log('✅ Car updated successfully:', updated._id);
+    res.json({ message: '✅ Car listing updated successfully!', car: updated });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to update car' });
+    console.error('Update car error:', err.message);
+
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ message: `❌ ${messages.join(', ')}` });
+    }
+
+    res.status(500).json({ message: '❌ Failed to update car listing. Please try again.' });
   }
 };
 
@@ -46,15 +233,82 @@ exports.updateCar = async (req, res) => {
 exports.deleteCar = async (req, res) => {
   try {
     const car = await Car.findById(req.params.id);
-    if (!car) return res.status(404).json({ message: 'Car not found' });
+    if (!car) {
+      return res.status(404).json({ message: '❌ Car not found. It may have already been deleted.' });
+    }
 
-    if (car.registeredEmail !== req.user.email)
-      return res.status(403).json({ message: 'Not authorized' });
+    if (car.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ message: '❌ You can only delete your own car listings.' });
+    }
 
     await car.deleteOne();
-    res.json({ message: 'Car deleted' });
+    
+    // Remove car from user's carListings
+    await User.findByIdAndUpdate(req.user.id, {
+      $pull: { carListings: car._id }
+    });
+
+    console.log('✅ Car deleted successfully:', car._id);
+    res.json({ message: '✅ Car listing deleted successfully!' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to delete car' });
+    console.error('Delete car error:', err.message);
+    res.status(500).json({ message: '❌ Failed to delete car listing. Please try again.' });
+  }
+};
+
+exports.toggleFavorite = async (req, res) => {
+  try {
+    const { carId } = req.params;
+    const userId = req.user.id;
+
+    if (!carId) {
+      return res.status(400).json({ message: '❌ Car ID is required.' });
+    }
+
+    const car = await Car.findById(carId);
+    if (!car) {
+      return res.status(404).json({ message: '❌ Car not found. It may have been deleted.' });
+    }
+
+    const isFavorited = car.favoriteBy.includes(userId);
+
+    if (isFavorited) {
+      car.favoriteBy = car.favoriteBy.filter(id => id.toString() !== userId);
+      console.log(`❤️ Removed ${userId} from favorites of car: ${carId}`);
+      res.json({ 
+        message: '✅ Removed from favorites',
+        isFavorite: false,
+        car 
+      });
+    } else {
+      car.favoriteBy.push(userId);
+      console.log(`❤️ Added ${userId} to favorites of car: ${carId}`);
+      res.json({ 
+        message: '✅ Added to favorites',
+        isFavorite: true,
+        car 
+      });
+    }
+
+    await car.save();
+  } catch (err) {
+    console.error('Toggle favorite error:', err.message);
+    res.status(500).json({ message: '❌ Failed to update favorite. Please try again.' });
+  }
+};
+
+
+exports.getUserFavorites = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const favoriteCars = await Car.find({ favoriteBy: userId }).sort({ createdAt: -1 });
+    
+    console.log(`📱 Found ${favoriteCars.length} favorites for user: ${userId}`);
+    
+    res.json(favoriteCars);
+  } catch (err) {
+    console.error('Get favorites error:', err.message);
+    res.status(500).json({ message: '❌ Failed to load your favorites. Please try again.' });
   }
 };

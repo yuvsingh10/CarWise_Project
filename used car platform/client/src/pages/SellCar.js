@@ -6,17 +6,15 @@ const SellCar = () => {
   const [form, setForm] = useState({
     name: '',
     price: '',
-    ownerName: '',
     ownerPhone: '',
-    registeredEmail: '',
     modelYear: '',
     kmsDriven: '',
     fuelType: '',
     transmission: '',
     seats: '',
-    engine: '',
     ownership: '',
-    photos: [],
+    description: '',
+    photo: '',
   });
 
   const navigate = useNavigate();
@@ -27,13 +25,11 @@ const SellCar = () => {
 
     try {
       const decoded = jwtDecode(token);
-      const email = decoded.email;
-      const phone = localStorage.getItem(`ownerPhone_${email}`);
+      const phone = decoded.phone || '';
 
       setForm((prev) => ({
         ...prev,
-        registeredEmail: email,
-        ownerPhone: phone || '',
+        ownerPhone: phone,
       }));
     } catch (err) {
       console.error('Token decode failed:', err);
@@ -46,111 +42,128 @@ const SellCar = () => {
   };
 
   const handlePhotoChange = (e) => {
-    const files = Array.from(e.target.files);
-    const validFiles = files.filter((file) =>
-      ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)
-    );
+    const file = e.target.files[0];
+    if (!file) return;
 
-    if (validFiles.length + form.photos.length > 10) {
-      alert('You can upload a maximum of 10 images.');
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+      alert('Only JPEG and PNG images are allowed.');
       return;
     }
 
-    const readers = validFiles.map(
-      (file) =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        })
-    );
-
-    Promise.all(readers)
-      .then((newPhotos) =>
-        setForm((prev) => ({ ...prev, photos: [...prev.photos, ...newPhotos] }))
-      )
-      .catch(() => alert('Failed to load one or more images.'));
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm((prev) => ({ ...prev, photo: reader.result }));
+    };
+    reader.onerror = () => alert('Failed to load image.');
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     const {
-      name, price, ownerName, ownerPhone, registeredEmail, modelYear,
-      kmsDriven, fuelType, transmission, seats, engine, ownership
+      name, price, ownerPhone, modelYear,
+      kmsDriven, fuelType, transmission, seats, ownership, photo
     } = form;
 
     if (
-      !name || !price || !ownerName || !ownerPhone || !registeredEmail || !modelYear ||
-      !kmsDriven || !fuelType || !transmission || !seats || !engine || !ownership
+      !name || !price || !ownerPhone || !modelYear ||
+      !kmsDriven || !fuelType || !transmission || !seats || !ownership
     ) {
       alert('Please fill all required fields.');
       return;
     }
 
-    const storedCars = JSON.parse(localStorage.getItem('cars')) || [];
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login first.');
+      return;
+    }
 
-    const newCar = {
-      id: Date.now().toString(),
-      ...form,
+    // Prepare car data - convert string values to numbers
+    const carData = {
+      name,
+      price: parseFloat(price),
+      modelYear: parseInt(modelYear),
+      kmsDriven: parseInt(kmsDriven),
+      fuelType,
+      transmission,
+      seats: parseInt(seats),
+      ownership: parseInt(ownership),
+      photo: photo || '',
+      description: form.description || '',
     };
 
-    localStorage.setItem('cars', JSON.stringify([...storedCars, newCar]));
-    alert('Car listed for sale successfully!');
-    navigate('/dashboard');
+    // Send to API
+    fetch('http://localhost:5000/api/cars', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(carData),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.message?.includes('✅')) {
+          alert('Car listed for sale successfully!');
+          navigate('/dashboard');
+        } else {
+          alert(`Error: ${data.message}`);
+        }
+      })
+      .catch((err) => {
+        console.error('Error:', err);
+        alert('Failed to list car. Please try again.');
+      });
   };
 
   return (
     <div
       style={{
-        backgroundImage: 'url("/BG2.jpg")',
+        backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("/BG2.jpg")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
         minHeight: '100vh',
-        padding: 30,
+        padding: 0,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'auto',
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: 700,
-          padding: 30,
-          background: 'rgba(255,255,255,0.95)',
-          borderRadius: 16,
-          boxShadow: '0 12px 24px rgba(0,0,0,0.25)',
-          backdropFilter: 'blur(6px)',
+          padding: 35,
+          background: 'rgba(0, 0, 0, 0.15)',
+          borderRadius: 20,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(20px)',
         }}
       >
-        <h2 style={{ textAlign: 'center', marginBottom: 25, color: '#007BFF' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: 25, color: '#64b5f6', fontSize: '1.8rem', fontWeight: '900' }}>
           Sell Your Car
         </h2>
         <form onSubmit={handleSubmit}>
-          <label>Car Name<span style={{ color: 'red' }}>*</span></label>
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Car Name<span style={{ color: '#ef5350' }}>*</span></label>
           <input type="text" name="name" value={form.name} onChange={handleChange} required placeholder="Toyota Corolla" style={inputStyle} />
 
-          <label>Price (₹)<span style={{ color: 'red' }}>*</span></label>
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Price (₹)<span style={{ color: '#ef5350' }}>*</span></label>
           <input type="number" name="price" value={form.price} onChange={handleChange} required placeholder="350000" min="0" style={inputStyle} />
 
-          <label>Owner Name<span style={{ color: 'red' }}>*</span></label>
-          <input type="text" name="ownerName" value={form.ownerName} onChange={handleChange} required placeholder="John Doe" style={inputStyle} />
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Owner Phone<span style={{ color: '#ef5350' }}>*</span></label>
+          <input type="tel" name="ownerPhone" value={form.ownerPhone} onChange={handleChange} required placeholder="9876543210" pattern="[0-9]{10}" title="Enter 10 digit phone number" style={inputStyle} disabled />
 
-          <label>Owner Phone<span style={{ color: 'red' }}>*</span></label>
-          <input type="tel" name="ownerPhone" value={form.ownerPhone} onChange={handleChange} required placeholder="9876543210" pattern="[0-9]{10}" title="Enter 10 digit phone number" style={inputStyle} />
-
-          <label>Registered Email<span style={{ color: 'red' }}>*</span></label>
-          <input type="email" name="registeredEmail" value={form.registeredEmail} onChange={handleChange} required placeholder="example@example.com" style={inputStyle} />
-
-          <label>Model Year<span style={{ color: 'red' }}>*</span></label>
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Model Year<span style={{ color: '#ef5350' }}>*</span></label>
           <input type="number" name="modelYear" value={form.modelYear} onChange={handleChange} required placeholder="2015" min="1900" max={new Date().getFullYear()} style={inputStyle} />
 
-          <label>Kilometers Driven<span style={{ color: 'red' }}>*</span></label>
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Kilometers Driven<span style={{ color: '#ef5350' }}>*</span></label>
           <input type="number" name="kmsDriven" value={form.kmsDriven} onChange={handleChange} required placeholder="50000" min="0" style={inputStyle} />
 
-          <label>Fuel Type<span style={{ color: 'red' }}>*</span></label>
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Fuel Type<span style={{ color: '#ef5350' }}>*</span></label>
           <select name="fuelType" value={form.fuelType} onChange={handleChange} required style={inputStyle}>
             <option value="">-- Select Fuel Type --</option>
             <option value="Petrol">Petrol</option>
@@ -159,36 +172,34 @@ const SellCar = () => {
             <option value="CNG">CNG</option>
           </select>
 
-          <label>Transmission<span style={{ color: 'red' }}>*</span></label>
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Transmission<span style={{ color: '#ef5350' }}>*</span></label>
           <select name="transmission" value={form.transmission} onChange={handleChange} required style={inputStyle}>
             <option value="">-- Select Transmission --</option>
             <option value="Manual">Manual</option>
             <option value="Automatic">Automatic</option>
           </select>
 
-          <label>Number of Seats<span style={{ color: 'red' }}>*</span></label>
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Number of Seats<span style={{ color: '#ef5350' }}>*</span></label>
           <input type="number" name="seats" value={form.seats} onChange={handleChange} required placeholder="5" min="1" style={inputStyle} />
 
-          <label>Engine Capacity<span style={{ color: 'red' }}>*</span></label>
-          <input type="text" name="engine" value={form.engine} onChange={handleChange} required placeholder="1498 cc" style={inputStyle} />
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Ownership (Number of owners)<span style={{ color: '#ef5350' }}>*</span></label>
+          <input type="number" name="ownership" value={form.ownership} onChange={handleChange} required placeholder="1" min="1" max="3" style={inputStyle} />
 
-          <label>Ownership (Number of owners)<span style={{ color: 'red' }}>*</span></label>
-          <input type="number" name="ownership" value={form.ownership} onChange={handleChange} required placeholder="1" min="1" style={inputStyle} />
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Description (Optional)</label>
+          <textarea name="description" value={form.description} onChange={handleChange} placeholder="Add details about the car..." style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} />
 
-          <label>Upload Photos (jpg/jpeg/png, max 10)</label>
-          <input type="file" accept="image/jpeg,image/jpg,image/png" multiple onChange={handlePhotoChange} style={{ marginBottom: 15 }} />
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Upload Photo (jpg/jpeg/png)</label>
+          <input type="file" accept="image/jpeg,image/jpg,image/png" onChange={handlePhotoChange} style={{ marginBottom: 15, color: '#fff' }} />
 
-          {form.photos.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}>
-              {form.photos.map((src, index) => (
-                <img key={index} src={src} alt={`Preview ${index + 1}`} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 6, border: '1px solid #ccc' }} />
-              ))}
+          {form.photo && (
+            <div style={{ marginBottom: 15 }}>
+              <img src={form.photo} alt="Preview" style={{ width: 150, height: 150, objectFit: 'cover', borderRadius: 6, border: '2px solid #64b5f6' }} />
             </div>
           )}
 
-          <button type="submit" style={submitBtnStyle}>List Car for Sale</button>
+          <button type="submit" style={submitBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#42a5f5'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#64b5f6'; }}>List Car for Sale</button>
 
-          <button type="button" onClick={() => navigate(-1)} style={{ ...submitBtnStyle, backgroundColor: '#6c757d', marginTop: 10 }}>
+          <button type="button" onClick={() => navigate(-1)} style={{ ...submitBtnStyle, backgroundColor: '#6c757d', marginTop: 10 }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#5a626d'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#6c757d'; }}>
             Back
           </button>
         </form>
@@ -199,24 +210,27 @@ const SellCar = () => {
 
 const inputStyle = {
   width: '100%',
-  padding: 10,
+  padding: '12px 14px',
   marginBottom: 15,
-  borderRadius: 6,
-  border: '1px solid #ccc',
+  borderRadius: 8,
+  border: '2px solid rgba(100, 181, 246, 0.3)',
   fontSize: 15,
+  background: 'rgba(255, 255, 255, 0.08)',
+  color: '#fff',
+  transition: 'all 0.3s',
 };
 
 const submitBtnStyle = {
   width: '100%',
   padding: 14,
-  backgroundColor: '#007BFF',
+  backgroundColor: '#64b5f6',
   color: '#fff',
   fontSize: 16,
   fontWeight: 'bold',
   borderRadius: 8,
   border: 'none',
   cursor: 'pointer',
-  boxShadow: '0 4px 10px rgba(0,123,255,0.3)',
+  boxShadow: '0 4px 15px rgba(100, 181, 246, 0.4)',
 };
 
 export default SellCar;

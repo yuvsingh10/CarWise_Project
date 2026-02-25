@@ -94,15 +94,15 @@ const CarDetails = () => {
 
   return (
     <>
-      
       <div
         style={{
           position: 'fixed',
           inset: 0,
-          backgroundImage: 'url("/BG3.png")',
+          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("/BG2.jpg")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          filter: 'blur(10px)',
+          backgroundAttachment: 'fixed',
+          filter: 'none',
           zIndex: -1,
         }}
       />
@@ -111,16 +111,17 @@ const CarDetails = () => {
         style={{
           maxWidth: 700,
           margin: '40px auto',
-          padding: 30,
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderRadius: 16,
-          boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+          padding: 35,
+          background: 'rgba(0, 0, 0, 0.15)',
+          borderRadius: 20,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(20px)',
           fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
           position: 'relative',
           zIndex: 10,
         }}
       >
-        <h2 style={{ marginBottom: 25, color: '#0d6efd', fontWeight: '700', fontSize: '2.2rem' }}>{car.name}</h2>
+        <h2 style={{ marginBottom: 25, color: '#64b5f6', fontWeight: '900', fontSize: '2.2rem' }}>{car.name}</h2>
 
         <div style={{ position: 'relative', marginBottom: 10, cursor: photos.length > 0 ? 'pointer' : 'default' }} onClick={() => photos.length > 0 && openGallery(0)}>
           <img
@@ -149,7 +150,7 @@ const CarDetails = () => {
           )}
         </div>
 
-        <div style={{ fontSize: 16, lineHeight: 1.6, color: '#333' }}>
+        <div style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(255, 255, 255, 0.8)' }}>
           <DetailRow label="Price:" value={car.price} />
           <DetailRow label="Owner Name:" value={car.ownerName} />
           <DetailRow label="Phone Number:" value={car.ownerPhone} />
@@ -166,7 +167,7 @@ const CarDetails = () => {
             onClick={handleBuyNow}
             style={{
               padding: '12px 28px',
-              backgroundColor: '#198754',
+              backgroundColor: '#64b5f6',
               color: '#fff',
               border: 'none',
               borderRadius: 8,
@@ -174,11 +175,11 @@ const CarDetails = () => {
               fontWeight: '700',
               fontSize: 16,
               marginRight: 12,
-              boxShadow: '0 5px 15px rgba(25,135,84,0.5)',
+              boxShadow: '0 5px 15px rgba(100,181,246,0.5)',
               transition: 'background-color 0.3s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#145c32')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#198754')}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#42a5f5')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#64b5f6')}
           >
             Buy Now
           </button>
@@ -188,7 +189,7 @@ const CarDetails = () => {
             aria-label={liked ? "Unlike this car" : "Like this car"}
             style={{
               padding: '10px 18px',
-              backgroundColor: liked ? '#dc3545' : '#6c757d',
+              backgroundColor: liked ? '#f44336' : '#6c757d',
               color: '#fff',
               border: 'none',
               borderRadius: 8,
@@ -196,11 +197,11 @@ const CarDetails = () => {
               fontWeight: '700',
               fontSize: 16,
               marginRight: 12,
-              boxShadow: liked ? '0 5px 15px rgba(220,53,69,0.5)' : '0 5px 15px rgba(108,117,125,0.5)',
+              boxShadow: liked ? '0 5px 15px rgba(244,67,54,0.5)' : '0 5px 15px rgba(108,117,125,0.5)',
               transition: 'background-color 0.3s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = liked ? '#a71d2a' : '#5a6268')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = liked ? '#dc3545' : '#6c757d')}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = liked ? '#ef5350' : '#5a6268')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = liked ? '#f44336' : '#6c757d')}
           >
             {liked ? '♥ Liked' : '♡ Like'}
           </button>
@@ -209,18 +210,18 @@ const CarDetails = () => {
             onClick={() => navigate('/dashboard')}
             style={{
               padding: '12px 28px',
-              backgroundColor: '#0d6efd',
+              backgroundColor: '#64b5f6',
               color: '#fff',
               border: 'none',
               borderRadius: 8,
               cursor: 'pointer',
               fontWeight: '700',
               fontSize: 16,
-              boxShadow: '0 5px 15px rgba(13,110,253,0.5)',
+              boxShadow: '0 5px 15px rgba(100,181,246,0.5)',
               transition: 'background-color 0.3s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#084298')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#0d6efd')}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#42a5f5')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#64b5f6')}
           >
             Back to Dashboard
           </button>
@@ -308,8 +309,8 @@ const CarDetails = () => {
 
 const DetailRow = ({ label, value }) => (
   <p style={{ margin: '8px 0' }}>
-    <strong style={{ color: '#0d6efd', minWidth: 120, display: 'inline-block' }}>{label}</strong>
-    <span style={{ color: '#333' }}>{value}</span>
+    <strong style={{ color: '#64b5f6', minWidth: 120, display: 'inline-block' }}>{label}</strong>
+    <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{value}</span>
   </p>
 );
 
