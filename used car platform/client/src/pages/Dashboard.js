@@ -149,6 +149,12 @@ const Dashboard = () => {
     seats: '',
   });
 
+  // Advanced filters
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 10000000 });
+  const [yearRange, setYearRange] = useState({ min: 1990, max: new Date().getFullYear() + 1 });
+  const [kmsRange, setKmsRange] = useState({ min: 0, max: 2000000 });
+  const [sortBy, setSortBy] = useState('newest');
+
   const navigate = useNavigate();
 
   
@@ -161,6 +167,17 @@ const Dashboard = () => {
     try {
       const decoded = jwtDecode(token);
       setUser(decoded);
+      
+      // Load saved filters from localStorage
+      const savedFilters = localStorage.getItem(`filters_${decoded.id}`);
+      if (savedFilters) {
+        const parsed = JSON.parse(savedFilters);
+        setFilters(parsed.filters || {});
+        setPriceRange(parsed.priceRange || { min: 0, max: 10000000 });
+        setYearRange(parsed.yearRange || { min: 1990, max: new Date().getFullYear() + 1 });
+        setKmsRange(parsed.kmsRange || { min: 0, max: 2000000 });
+        setSortBy(parsed.sortBy || 'newest');
+      }
     } catch (err) {
       localStorage.removeItem('token');
       navigate('/login');
@@ -171,24 +188,47 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchCars = async () => {
       try {
-        const response = await API.get('/cars');
+        // Build query parameters
+        const params = new URLSearchParams({
+          minPrice: priceRange.min,
+          maxPrice: priceRange.max,
+          minYear: yearRange.min,
+          maxYear: yearRange.max,
+          minKms: kmsRange.min,
+          maxKms: kmsRange.max,
+          sortBy: sortBy
+        });
+
+        const response = await API.get(`/cars?${params}`);
         console.log('🚗 Fetched cars from database:', response.data);
         setCars(response.data);
       } catch (err) {
         console.error('❌ Failed to fetch cars:', err.message);
-        // Fallback to localStorage
-        const storedCars = JSON.parse(localStorage.getItem('cars')) || [];
-        setCars(storedCars);
+        setCars([]);
       }
     };
     
     fetchCars();
-  }, []);
+  }, [priceRange, yearRange, kmsRange, sortBy]);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    if (user) {
+      const filtersToSave = {
+        filters,
+        priceRange,
+        yearRange,
+        kmsRange,
+        sortBy
+      };
+      localStorage.setItem(`filters_${user.id}`, JSON.stringify(filtersToSave));
+    }
+  }, [filters, priceRange, yearRange, kmsRange, sortBy, user]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filters]);
+  }, [searchTerm, filters, priceRange, yearRange, kmsRange, sortBy]);
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
@@ -201,7 +241,7 @@ const Dashboard = () => {
 
   
   const otherUsersCars = cars
-    .filter((c) => c.ownerId !== user.id)
+    .filter((c) => c.ownerId._id !== user.id) // ownerId is now an object with _id
     .filter((c) => (filters.fuelType ? c.fuelType === filters.fuelType : true))
     .filter((c) => (filters.transmission ? c.transmission === filters.transmission : true))
     .filter((c) => (filters.ownership ? String(c.ownership) === filters.ownership : true))
@@ -352,13 +392,13 @@ const Dashboard = () => {
             }
           `}</style>
 
-          {/* Filters */}
+          {/* Filters - Row 1: Basic Filters */}
           <div
             style={{
               display: 'flex',
               flexWrap: 'wrap',
               gap: '12px',
-              marginBottom: '30px',
+              marginBottom: '15px',
             }}
           >
             <select 
@@ -429,7 +469,190 @@ const Dashboard = () => {
               <option value="5" style={{ background: '#333', color: '#fff' }}>5</option>
               <option value="7" style={{ background: '#333', color: '#fff' }}>7</option>
             </select>
+
+            <select 
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                ...selectStyle,
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                borderColor: 'rgba(100, 181, 246, 0.3)',
+              }}
+            >
+              <option value="newest" style={{ background: '#333', color: '#fff' }}>Newest First</option>
+              <option value="priceAsc" style={{ background: '#333', color: '#fff' }}>Price ↑ (Low to High)</option>
+              <option value="priceDesc" style={{ background: '#333', color: '#fff' }}>Price ↓ (High to Low)</option>
+              <option value="yearDesc" style={{ background: '#333', color: '#fff' }}>Year ↓ (Newest Car)</option>
+              <option value="yearAsc" style={{ background: '#333', color: '#fff' }}>Year ↑ (Oldest Car)</option>
+              <option value="favorited" style={{ background: '#333', color: '#fff' }}>Most Favorited ❤️</option>
+            </select>
           </div>
+
+          {/* Filters - Row 2: Range Sliders */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '15px',
+              marginBottom: '20px',
+              padding: '15px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '10px',
+              border: '1px solid rgba(100, 181, 246, 0.2)',
+            }}
+          >
+            {/* Price Range */}
+            <div>
+              <label style={{ color: '#64b5f6', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                💰 Price: ₹{(priceRange.min / 100000).toFixed(1)}L - ₹{(priceRange.max / 100000).toFixed(1)}L
+              </label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="10000000"
+                  step="100000"
+                  value={priceRange.min}
+                  onChange={(e) => {
+                    const newMin = parseInt(e.target.value);
+                    if (newMin <= priceRange.max) {
+                      setPriceRange({ ...priceRange, min: newMin });
+                    }
+                  }}
+                  style={{ flex: 1, cursor: 'pointer', accentColor: '#64b5f6' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="10000000"
+                  step="100000"
+                  value={priceRange.max}
+                  onChange={(e) => {
+                    const newMax = parseInt(e.target.value);
+                    if (newMax >= priceRange.min) {
+                      setPriceRange({ ...priceRange, max: newMax });
+                    }
+                  }}
+                  style={{ flex: 1, cursor: 'pointer', accentColor: '#64b5f6' }}
+                />
+              </div>
+            </div>
+
+            {/* Year Range */}
+            <div>
+              <label style={{ color: '#64b5f6', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                📅 Year: {yearRange.min} - {yearRange.max}
+              </label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  type="range"
+                  min="1990"
+                  max={new Date().getFullYear() + 1}
+                  step="1"
+                  value={yearRange.min}
+                  onChange={(e) => {
+                    const newMin = parseInt(e.target.value);
+                    if (newMin <= yearRange.max) {
+                      setYearRange({ ...yearRange, min: newMin });
+                    }
+                  }}
+                  style={{ flex: 1, cursor: 'pointer', accentColor: '#64b5f6' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <input
+                  type="range"
+                  min="1990"
+                  max={new Date().getFullYear() + 1}
+                  step="1"
+                  value={yearRange.max}
+                  onChange={(e) => {
+                    const newMax = parseInt(e.target.value);
+                    if (newMax >= yearRange.min) {
+                      setYearRange({ ...yearRange, max: newMax });
+                    }
+                  }}
+                  style={{ flex: 1, cursor: 'pointer', accentColor: '#64b5f6' }}
+                />
+              </div>
+            </div>
+
+            {/* KMs Range */}
+            <div>
+              <label style={{ color: '#64b5f6', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                🛣️ KMs: {(priceRange.min === 0 ? 0 : kmsRange.min / 1000).toFixed(0)}K - {(kmsRange.max / 1000).toFixed(0)}K
+              </label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="2000000"
+                  step="10000"
+                  value={kmsRange.min}
+                  onChange={(e) => {
+                    const newMin = parseInt(e.target.value);
+                    if (newMin <= kmsRange.max) {
+                      setKmsRange({ ...kmsRange, min: newMin });
+                    }
+                  }}
+                  style={{ flex: 1, cursor: 'pointer', accentColor: '#64b5f6' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="2000000"
+                  step="10000"
+                  value={kmsRange.max}
+                  onChange={(e) => {
+                    const newMax = parseInt(e.target.value);
+                    if (newMax >= kmsRange.min) {
+                      setKmsRange({ ...kmsRange, max: newMax });
+                    }
+                  }}
+                  style={{ flex: 1, cursor: 'pointer', accentColor: '#64b5f6' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          <button
+            onClick={() => {
+              setFilters({ fuelType: '', transmission: '', ownership: '', seats: '' });
+              setPriceRange({ min: 0, max: 10000000 });
+              setYearRange({ min: 1990, max: new Date().getFullYear() + 1 });
+              setKmsRange({ min: 0, max: 2000000 });
+              setSortBy('newest');
+              setSearchTerm('');
+            }}
+            style={{
+              padding: '10px 18px',
+              background: 'rgba(255, 193, 7, 0.2)',
+              border: '1px solid rgba(255, 193, 7, 0.4)',
+              color: '#ffd54f',
+              fontSize: '13px',
+              fontWeight: '600',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginBottom: '20px',
+              transition: 'all 0.3s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 193, 7, 0.35)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            🔄 Clear All Filters
+          </button>
 
           {otherUsersCars.length === 0 && (
             <p style={{ 
@@ -452,7 +675,7 @@ const Dashboard = () => {
             }}
           >
             {paginatedCars.map((car) => {
-              const isFavorited = car.favoriteBy && car.favoriteBy.includes(user?.email);
+              const isFavorited = car.favoriteBy && car.favoriteBy.includes(user?.id);
               
               return (
               <div

@@ -13,9 +13,59 @@ const {
 } = require('../utils/validators');
 
 
-exports.getAllCars = async (_req, res) => {
+exports.getAllCars = async (req, res) => {
   try {
-    const cars = await Car.find().sort({ createdAt: -1 });
+    const {
+      minPrice = 0,
+      maxPrice = 10000000,
+      minYear = 1990,
+      maxYear = 2100,
+      minKms = 0,
+      maxKms = 2000000,
+      sortBy = 'newest'
+    } = req.query;
+
+    // Build filter object
+    const filters = {
+      price: { $gte: minPrice, $lte: maxPrice },
+      modelYear: { $gte: minYear, $lte: maxYear },
+      kmsDriven: { $gte: minKms, $lte: maxKms }
+    };
+
+    // Convert strings to numbers for proper comparison
+    filters.price.$gte = parseFloat(minPrice) || 0;
+    filters.price.$lte = parseFloat(maxPrice) || 10000000;
+    filters.modelYear.$gte = parseInt(minYear) || 1990;
+    filters.modelYear.$lte = parseInt(maxYear) || 2100;
+    filters.kmsDriven.$gte = parseInt(minKms) || 0;
+    filters.kmsDriven.$lte = parseInt(maxKms) || 2000000;
+
+    // Determine sort option
+    let sortOption = { createdAt: -1 }; // Default: newest first
+    
+    switch (sortBy) {
+      case 'priceAsc':
+        sortOption = { price: 1 };
+        break;
+      case 'priceDesc':
+        sortOption = { price: -1 };
+        break;
+      case 'yearAsc':
+        sortOption = { modelYear: 1 };
+        break;
+      case 'yearDesc':
+        sortOption = { modelYear: -1 };
+        break;
+      case 'favorited':
+        sortOption = { 'favoriteBy': -1 }; // Most favorites first
+        break;
+      default:
+        sortOption = { createdAt: -1 }; // newest
+    }
+
+    const cars = await Car.find(filters).sort(sortOption).populate('ownerId', 'name email phone');
+    
+    console.log(`🔍 Filtered cars: ${cars.length} results (price: ${minPrice}-${maxPrice}, year: ${minYear}-${maxYear}, kms: ${minKms}-${maxKms}, sort: ${sortBy})`);
     res.json(cars);
   } catch (err) {
     console.error('Get all cars error:', err.message);
