@@ -26,10 +26,10 @@ const Home = () => {
 
   // Feature cards for logged-in users
   const features = [
-    { icon: '🚗', title: 'Browse Cars', desc: 'Explore thousands of quality used cars' },
-    { icon: '📤', title: 'Sell Your Car', desc: 'List your car in minutes with photos' },
-    { icon: '❤️', title: 'Favorites', desc: 'Save your favorite listings' },
-    { icon: '📋', title: 'Manage Cars', desc: 'Edit or delete your listings' },
+    { icon: '🚗', title: 'Browse Cars', desc: 'Explore thousands of quality used cars', path: '/dashboard' },
+    { icon: '📤', title: 'Sell Your Car', desc: 'List your car in minutes with photos', path: '/sell' },
+    { icon: '❤️', title: 'Favorites', desc: 'Save your favorite listings', path: '/favorites' },
+    { icon: '📋', title: 'Manage Cars', desc: 'Edit or delete your listings', path: '/my-cars' },
   ];
 
   return (
@@ -342,6 +342,7 @@ const Home = () => {
               {features.map((feature, idx) => (
                 <div
                   key={idx}
+                  onClick={() => navigate(feature.path)}
                   className="feature-card"
                   style={{
                     animationDelay: `${idx * 0.1}s`,

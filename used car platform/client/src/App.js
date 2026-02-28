@@ -11,7 +11,8 @@ import EditCar from './pages/EditCar';
 import CarDetails from './pages/CarDetails';
 import Profile from './pages/Profile'; 
 import Delete from './pages/Delete';
-import Favorites from './pages/Favorites';  
+import Favorites from './pages/Favorites';
+import Messaging from './pages/Messaging';
 
 const App = () => {
   return (
@@ -27,7 +28,8 @@ const App = () => {
         <Route path="/car-details" element={<CarDetails />} />
         <Route path="/profile" element={<Profile />} /> 
         <Route path="/delete" element={<Delete />} />
-        <Route path="/favorites" element={<Favorites />} />  
+        <Route path="/favorites" element={<Favorites />} />
+        <Route path="/messages" element={<Messaging />} />  
       </Routes>
     </Router>
   );

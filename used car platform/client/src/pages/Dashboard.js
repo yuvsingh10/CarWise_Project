@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 
 
-const Sidebar = ({ isOpen, toggleSidebar, handleLogout, navigate }) => {
+const Sidebar = ({ isOpen, toggleSidebar, handleLogout, navigate, unreadCount }) => {
   const baseBtn = {
     padding: '14px 18px',
     background: 'rgba(255, 255, 255, 0.05)',
@@ -88,6 +88,7 @@ const Sidebar = ({ isOpen, toggleSidebar, handleLogout, navigate }) => {
           { label: '🚘 My Cars', route: '/my-cars' },
           { label: '📤 Sell Your Car', route: '/sell' },
           { label: '❤️ Favorites', route: '/favorites' },
+          { label: '💬 Messages', route: '/messages' },
         ].map((btn, idx) => (
           <button
             key={idx}
@@ -95,11 +96,29 @@ const Sidebar = ({ isOpen, toggleSidebar, handleLogout, navigate }) => {
               navigate(btn.route);
               toggleSidebar();
             }}
-            style={baseBtn}
+            style={{ ...baseBtn, position: 'relative' }}
             onMouseEnter={(e) => Object.assign(e.currentTarget.style, hoverStyle)}
             onMouseLeave={(e) => Object.assign(e.currentTarget.style, baseBtn)}
           >
             {btn.label}
+            {btn.route === '/messages' && unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  background: '#ff4757',
+                  color: 'white',
+                  borderRadius: '50%',
+                  padding: '1px 6px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  minWidth: '20px',
+                  textAlign: 'center',
+                }}
+              >
+                {unreadCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -141,6 +160,7 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [filters, setFilters] = useState({
     fuelType: '',
@@ -183,6 +203,22 @@ const Dashboard = () => {
       navigate('/login');
     }
   }, [navigate]);
+
+  // Fetch unread message count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await API.get('/messages/unread-count');
+        setUnreadCount(response.data.unreadCount);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   
   useEffect(() => {
@@ -276,6 +312,7 @@ const Dashboard = () => {
         toggleSidebar={toggleSidebar}
         handleLogout={handleLogout}
         navigate={navigate}
+        unreadCount={unreadCount}
       />
 
       <style>{`

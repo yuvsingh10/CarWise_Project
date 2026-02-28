@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const CarDetails = () => {
   const location = useLocation();
@@ -8,6 +9,9 @@ const CarDetails = () => {
 
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   
   const [liked, setLiked] = useState(false);
@@ -25,6 +29,42 @@ const CarDetails = () => {
   };
 
   const userEmail = getUserEmail();
+
+  const handleSendMessage = async () => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      alert('Please log in to send messages');
+      navigate('/');
+      return;
+    }
+
+    if (user.id === car.ownerId._id) {
+      alert('You cannot message yourself');
+      return;
+    }
+
+    if (!messageText.trim()) {
+      alert('Please enter a message');
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      await api.post('/messages/send', {
+        recipientId: car.ownerId._id,
+        carId: car._id,
+        message: messageText,
+      });
+      alert('Message sent successfully!');
+      setMessageModalOpen(false);
+      setMessageText('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert(error.response?.data?.error || 'Failed to send message');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   
   useEffect(() => {
@@ -162,7 +202,7 @@ const CarDetails = () => {
           <DetailRow label="Seats:" value={car.seats} />
         </div>
 
-        <div style={{ marginTop: 30, display: 'flex', alignItems: 'center' }}>
+        <div style={{ marginTop: 30, display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
             onClick={handleBuyNow}
             style={{
@@ -174,7 +214,6 @@ const CarDetails = () => {
               cursor: 'pointer',
               fontWeight: '700',
               fontSize: 16,
-              marginRight: 12,
               boxShadow: '0 5px 15px rgba(100,181,246,0.5)',
               transition: 'background-color 0.3s',
             }}
@@ -182,6 +221,26 @@ const CarDetails = () => {
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#64b5f6')}
           >
             Buy Now
+          </button>
+
+          <button
+            onClick={() => setMessageModalOpen(true)}
+            style={{
+              padding: '12px 28px',
+              backgroundColor: '#667eea',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontWeight: '700',
+              fontSize: 16,
+              boxShadow: '0 5px 15px rgba(102,126,234,0.5)',
+              transition: 'background-color 0.3s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#5568d3')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#667eea')}
+          >
+            📧 Message Seller
           </button>
 
           <button
@@ -301,6 +360,89 @@ const CarDetails = () => {
           >
             ›
           </button>
+        </div>
+      )}
+
+      {/* Message Modal */}
+      {messageModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+          }}
+          onClick={() => setMessageModalOpen(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 20px 0', color: '#333' }}>Message Seller</h2>
+            <p style={{ color: '#666', marginBottom: '15px', fontSize: '14px' }}>
+              Interested in {car.name}? Send a message to the seller.
+            </p>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Type your message here... (max 2000 characters)"
+              maxLength="2000"
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                minHeight: '120px',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ marginTop: '15px', textAlign: 'right', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setMessageModalOpen(false)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#ccc',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={sendingMessage}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: sendingMessage ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  opacity: sendingMessage ? 0.6 : 1,
+                }}
+              >
+                {sendingMessage ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

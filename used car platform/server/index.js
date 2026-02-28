@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 
 const authRoutes = require('./routes/authRoutes');
 const carRoutes = require('./routes/carRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 const app = express();
 app.use(cors());
@@ -32,6 +33,7 @@ connectDB();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/cars', carRoutes);
+app.use('/api/messages', messageRoutes);
 
 app.get('/', (req, res) => {
   res.send('Used Car Platform API running');

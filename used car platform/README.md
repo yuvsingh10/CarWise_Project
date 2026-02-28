@@ -31,6 +31,22 @@ The application features JWT-based authentication, comprehensive server-side val
 - Database-backed (uses MongoDB, not localStorage)
 - Shows favorite status in real-time
 
+### Messaging System
+- **In-app buyer-seller communication** for inquiries about specific cars
+- **Message Seller Button**: Quick access from car details page (opens modal)
+- **Dedicated Messaging Hub**: View all conversations with unread count badge
+- **Message Features**:
+  - Conversation grouping by sender + car listing
+  - Message history with timestamps
+  - Unread message tracking (auto-marked as read)
+  - Sender info display (name, phone, email)
+  - Delete sent messages (sender only)
+  - Message validation (1-2000 characters)
+  - Real-time unread notification in Navbar
+  - Last message preview in conversation list
+- **Security**: Messages only visible to sender/recipient; users can't message themselves
+- **Database-backed**: All messages stored in MongoDB with proper indexing
+
 ### UI/UX Features
 - **Color Theming**:
   - Auth pages (Home, Register, Login): Purple/gold gradient (#667eea → #764ba2, #ffd54f)
@@ -70,6 +86,16 @@ The application features JWT-based authentication, comprehensive server-side val
 - ownership, seats, description
 - favoriteBy array (references User IDs)
 - Timestamps
+
+**Message Model** (MongoDB):
+- senderId (references User)
+- recipientId (references User)
+- carId (references Car) - car being inquired about
+- message (string, 1-2000 characters)
+- isRead (boolean, default: false)
+- readAt (timestamp, null until read)
+- Timestamps (createdAt, updatedAt)
+- Indexes on: (senderId, recipientId, carId), (recipientId, isRead)
 
 **Real Ownership Verification**: Uses ObjectIds instead of email strings for robust authorization checks
 
@@ -112,13 +138,30 @@ The application features JWT-based authentication, comprehensive server-side val
    - Remove button to unfavorite
    - View Details button to navigate
 
-### 6. **Profile** (Profile.js)
+### 6. **Messaging System** (Messaging.js + CarDetails.js)
+   - **Send Message**: Click "📧 Message Seller" button on car details page
+   - **Message Modal**: Quick message dialog to seller about specific car
+   - **Messaging Hub**: Dedicated page to view all conversations
+   - **Features**:
+     - View all active conversations with buyers/sellers
+     - Shows last message preview and timestamp
+     - Displays unread message count per conversation
+     - Real-time unread badge in Navbar (updates every 10 seconds)
+     - Full message thread display with timestamps
+     - Sender info (name, phone, email)
+     - Mark messages as read automatically
+     - Delete sent messages
+     - Messages limited to 2000 characters
+     - Grouped by conversation (sender + car)
+   - **Security**: Only conversation participants can view messages
+
+### 7. **Profile** (Profile.js)
    - View your name, email, phone
    - Update phone number
    - Upload profile picture
    - Delete account button (⚠️ permanent)
 
-### 7. **Delete Account** (Delete.js)
+### 8. **Delete Account** (Delete.js)
    - Permanent account deletion
    - All associated cars removed from database
    - Confirmation required
@@ -175,6 +218,15 @@ The application features JWT-based authentication, comprehensive server-side val
 - DELETE /api/cars/:id - Delete car
 - POST /api/cars/:carId/favorite - Toggle favorite
 - GET /api/cars/favorites - Get user's favorites
+
+**Messages** (All require authentication):
+- POST /api/messages/send - Send message to user about car
+- GET /api/messages/conversation/:otherUserId/:carId - Get full conversation
+- GET /api/messages/conversations - Get all conversations (with last message preview)
+- GET /api/messages/unread-count - Get total unread message count
+- PUT /api/messages/:messageId/read - Mark message as read
+- DELETE /api/messages/:messageId - Delete sent message (sender only)
+- GET /api/messages/car/:carId/inquiries - Get all inquiries for car listing (owner only)
 
 ---
 
@@ -245,6 +297,9 @@ npm start
 - Profile management with phone updates
 - Account deletion with cascading cleanup
 - Search and filter functionality
+- **Messaging System** (buyer-seller communication, message history, unread tracking)
+- **Advanced Search Filters** (price range, year range, KMs range, 6 sort options)
+- **Filter Persistence** (saves user preferences to localStorage)
 
 ### 🔄 In Progress / Future Enhancements
 - Cloud storage integration (AWS S3 / Azure Blob) for images
@@ -252,9 +307,8 @@ npm start
 - Email verification for registration
 - Password reset functionality
 - Rate limiting & DDoS protection
-- Advanced search (price range, year range)
+- WebSocket integration for real-time message delivery
 - User ratings & reviews
-- Messaging between buyers/sellers
 - Admin dashboard
 - Analytics & reporting
 
@@ -264,6 +318,7 @@ npm start
 - ~~Simulated authentication~~ → Real JWT with server verification
 - ~~Large Base64 images~~ → Optimized image handling (cloud storage coming)
 - ~~No car ownership verification~~ → Proper ObjectId relationships
+- ~~No buyer-seller communication~~ → Full messaging system implemented
 
 ---
 
@@ -288,7 +343,8 @@ npm start
 used car platform/
 ├── client/
 │   ├── src/
-│   │   ├── components/Navbar.js
+│   │   ├── components/
+│   │   │   └── Navbar.js (with messaging link & unread badge)
 │   │   ├── pages/
 │   │   │   ├── Home.js (Home, Register, Login in one)
 │   │   │   ├── Dashboard.js (all cars, pagination, search, filter, favorites)
@@ -296,27 +352,31 @@ used car platform/
 │   │   │   ├── MyCars.js (user's listings)
 │   │   │   ├── EditCar.js (update listing)
 │   │   │   ├── Delete.js (delete account)
-│   │   │   ├── CarDetails.js (single car view)
+│   │   │   ├── CarDetails.js (single car view, message seller button)
 │   │   │   ├── Favorites.js (favorite cars page)
-│   │   │   └── Profile.js (user profile)
-│   │   ├── services/api.js (Axios config with interceptor)
+│   │   │   ├── Profile.js (user profile)
+│   │   │   └── Messaging.js (conversations list & message thread)
+│   │   ├── services/api.js (Axios config with JWT interceptor)
 │   │   ├── App.js (Router setup)
 │   │   └── index.js (React entry point)
 │   └── package.json
 └── server/
     ├── models/
     │   ├── User.js (name, email, password, phone, carListings)
-    │   └── Car.js (name, price, ownerId, photo, etc.)
+    │   ├── Car.js (name, price, ownerId, photo, favoriteBy, etc.)
+    │   └── Message.js (senderId, recipientId, carId, message, isRead)
     ├── controllers/
     │   ├── authController.js (register, login, profile, delete)
-    │   └── carController.js (CRUD + favorites)
+    │   ├── carController.js (CRUD + favorites + advanced filtering)
+    │   └── messageController.js (send, get conversations, mark read, delete)
     ├── routes/
     │   ├── authRoutes.js
-    │   └── carRoutes.js
+    │   ├── carRoutes.js
+    │   └── messageRoutes.js
     ├── middleware/authMiddleware.js (JWT verification)
     ├── config/db.js (MongoDB connection)
     ├── utils/validators.js (13 validation functions)
-    ├── index.js (Express server)
+    ├── index.js (Express server setup)
     └── package.json
 ```
 

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const carSchema = new mongoose.Schema(
   {
     name:       { type: String, required: true },
-    price:      { type: String, required: true },         
+    price:      { type: Number, required: true },         
     photo:      { type: String },                         
     ownerId:    {
       type: mongoose.Schema.Types.ObjectId,
@@ -15,7 +15,7 @@ const carSchema = new mongoose.Schema(
     fuelType:   { type: String },
     transmission: { type: String },
     kmsDriven:  { type: Number },
-    ownership:  { type: String },                          
+    ownership:  { type: Number },                          
     seats:      { type: Number },
     description: { type: String },
     favoriteBy: [

@@ -9,6 +9,7 @@ const {
   validateFuelType,
   validateTransmission,
   validateDescription,
+  validateName,
   sanitizeString,
 } = require('../utils/validators');
 
@@ -78,10 +79,29 @@ exports.createCar = async (req, res) => {
   try {
     const { name, price, modelYear, fuelType, transmission, kmsDriven, ownership, seats, description, photo } = req.body;
 
+    console.log('📝 Creating car with data:', {
+      name,
+      price: typeof price,
+      modelYear: typeof modelYear,
+      fuelType,
+      transmission,
+      kmsDriven: typeof kmsDriven,
+      ownership: typeof ownership,
+      seats: typeof seats,
+      photoLength: photo ? photo.length : 0,
+      userId: req.user.id,
+      userPhone: req.user.phone
+    });
+
     // Validate name
     const nameValidation = validateName(name);
     if (!nameValidation.valid) {
       return res.status(400).json({ message: `❌ ${nameValidation.error}` });
+    }
+
+    // Check photo size (limit to 5MB)
+    if (photo && photo.length > 5242880) { // 5MB in bytes (Base64 is ~1.33x larger)
+      return res.status(400).json({ message: '❌ Photo is too large. Please use a smaller image (max 5MB).' });
     }
 
     // Validate price
@@ -145,7 +165,7 @@ exports.createCar = async (req, res) => {
       price: priceValidation.value,
       photo: photo || '',
       ownerId: req.user.id,
-      ownerPhone: req.user.phone,
+      ownerPhone: req.user.phone || '',
       modelYear: yearValidation.value,
       fuelType: fuelValidation.value,
       transmission: transmissionValidation.value,
@@ -163,7 +183,10 @@ exports.createCar = async (req, res) => {
     console.log('✅ Car created successfully:', newCar._id);
     res.status(201).json({ message: '✅ Car listed successfully!', car: newCar });
   } catch (err) {
-    console.error('Create car error:', err.message);
+    console.error('Create car error - Full details:', err);
+    console.error('Error message:', err.message);
+    console.error('Error name:', err.name);
+    console.error('Error stack:', err.stack);
 
     // Handle validation errors from schema
     if (err.name === 'ValidationError') {
@@ -171,7 +194,11 @@ exports.createCar = async (req, res) => {
       return res.status(400).json({ message: `❌ ${messages.join(', ')}` });
     }
 
-    res.status(500).json({ message: '❌ Failed to create car listing. Please try again.' });
+    // Return detailed error for debugging
+    res.status(500).json({ 
+      message: '❌ Failed to create car listing. Please try again.',
+      error: err.message 
+    });
   }
 };
 

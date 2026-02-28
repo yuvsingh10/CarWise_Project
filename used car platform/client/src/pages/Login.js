@@ -27,6 +27,12 @@ const Login = () => {
       const res = await API.post('/auth/login', { email, password });
       setLoading(false);
       localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: res.data.id,
+        name: res.data.name,
+        email: res.data.email,
+        phone: res.data.phone
+      }));
       alert('Login successful!');
       navigate('/dashboard');
     } catch (err) {

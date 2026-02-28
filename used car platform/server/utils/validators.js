@@ -49,7 +49,7 @@ const validateName = (name) => {
   if (!nameRegex.test(name)) {
     return { valid: false, error: '❌ Name can only contain letters, spaces, hyphens, and apostrophes' };
   }
-  return { valid: true };
+  return { valid: true, value: name };
 };
 
 /**
@@ -163,7 +163,7 @@ const validateFuelType = (fuelType) => {
     return { valid: false, error: `❌ Fuel type must be one of: ${validFuels.join(', ')}` };
   }
   
-  return { valid: true };
+  return { valid: true, value: fuelType };
 };
 
 /**
@@ -176,14 +176,14 @@ const validateTransmission = (transmission) => {
     return { valid: false, error: `❌ Transmission must be one of: ${validTransmissions.join(', ')}` };
   }
   
-  return { valid: true };
+  return { valid: true, value: transmission };
 };
 
 /**
  * Validate car description (optional, max 500 chars)
  */
 const validateDescription = (description) => {
-  if (!description) return { valid: true };
+  if (!description) return { valid: true, value: '' };
   
   if (typeof description !== 'string') {
     return { valid: false, error: '❌ Description must be text' };
@@ -193,7 +193,7 @@ const validateDescription = (description) => {
     return { valid: false, error: '❌ Description cannot exceed 500 characters' };
   }
   
-  return { valid: true };
+  return { valid: true, value: description };
 };
 
 module.exports = {
