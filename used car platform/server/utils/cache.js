@@ -3,7 +3,7 @@ const redis = require('redis');
 let redisClient = null;
 let cacheEnabled = false;
 
-// Initialize Redis client
+// Initialize Redis client (non-blocking)
 const initRedis = async () => {
   try {
     redisClient = redis.createClient({
@@ -11,18 +11,21 @@ const initRedis = async () => {
       port: process.env.REDIS_PORT || 6379,
       password: process.env.REDIS_PASSWORD || undefined,
       socket: {
+        connectTimeout: 3000, // 3 second timeout
         reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.warn('⚠️ Redis connection failed after 10 retries. Running without cache.');
+          if (retries > 3) {
+            console.warn('⚠️ Redis unavailable - running without cache');
             return new Error('Redis connection limit reached');
           }
-          return Math.min(retries * 100, 3000);
+          return Math.min(retries * 200, 500);
         },
       },
     });
 
     redisClient.on('error', (err) => {
-      console.warn('⚠️ Redis error:', err.message);
+      if (!cacheEnabled) {
+        console.warn('⚠️ Redis unavailable - caching disabled');
+      }
       cacheEnabled = false;
     });
 
@@ -36,14 +39,17 @@ const initRedis = async () => {
       cacheEnabled = false;
     });
 
-    await redisClient.connect();
+    // Try to connect but don't await - let it happen in background
+    redisClient.connect().catch(() => {
+      cacheEnabled = false;
+    });
   } catch (error) {
-    console.warn('⚠️ Redis initialization error:', error.message);
+    console.warn('⚠️ Redis unavailable - caching disabled');
     cacheEnabled = false;
   }
 };
 
-// Initialize on module load
+// Initialize on module load (async but non-blocking)
 initRedis();
 
 // Cache key generators
