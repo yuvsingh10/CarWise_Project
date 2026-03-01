@@ -8,6 +8,7 @@ const EditCar = () => {
 
   const [form, setForm] = useState({
     name: '',
+    brand: '',
     price: '',
     ownerPhone: '',
     modelYear: '',
@@ -24,6 +25,7 @@ const EditCar = () => {
     if (car) {
       setForm({
         name: car.name || '',
+        brand: car.brand || '',
         price: car.price || '',
         ownerPhone: car.ownerPhone || '',
         modelYear: car.modelYear || '',
@@ -181,6 +183,19 @@ const EditCar = () => {
           value={form.name}
           onChange={handleChange}
           placeholder="Toyota Corolla"
+          required
+          style={inputStyle}
+        />
+
+        <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+          Brand<span style={{ color: '#ef5350' }}>*</span>
+        </label>
+        <input
+          type="text"
+          name="brand"
+          value={form.brand}
+          onChange={handleChange}
+          placeholder="Toyota"
           required
           style={inputStyle}
         />

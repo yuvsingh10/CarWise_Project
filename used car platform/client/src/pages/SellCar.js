@@ -5,6 +5,7 @@ import { jwtDecode } from 'jwt-decode';
 const SellCar = () => {
   const [form, setForm] = useState({
     name: '',
+    brand: '',
     price: '',
     ownerPhone: '',
     modelYear: '',
@@ -150,6 +151,9 @@ const SellCar = () => {
         <form onSubmit={handleSubmit}>
           <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Car Name<span style={{ color: '#ef5350' }}>*</span></label>
           <input type="text" name="name" value={form.name} onChange={handleChange} required placeholder="Toyota Corolla" style={inputStyle} />
+
+          <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Brand<span style={{ color: '#ef5350' }}>*</span></label>
+          <input type="text" name="brand" value={form.brand} onChange={handleChange} required placeholder="Toyota" style={inputStyle} />
 
           <label style={{ color: '#64b5f6', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Price (₹)<span style={{ color: '#ef5350' }}>*</span></label>
           <input type="number" name="price" value={form.price} onChange={handleChange} required placeholder="350000" min="0" style={inputStyle} />

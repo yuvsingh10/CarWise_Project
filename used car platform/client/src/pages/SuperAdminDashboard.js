@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const SuperAdminDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('users');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -279,6 +281,16 @@ const SuperAdminDashboard = () => {
     setActiveTab(tab);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('admin');
+    localStorage.removeItem('superAdminToken');
+    localStorage.removeItem('superAdmin');
+    navigate('/login');
+  };
+
   const tabStyle = {
     display: 'flex',
     gap: '10px',
@@ -345,7 +357,24 @@ const SuperAdminDashboard = () => {
 
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ color: '#ff9800', marginBottom: '20px' }}>👑 SuperAdmin Dashboard</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1 style={{ color: '#ff9800', margin: 0 }}>👑 SuperAdmin Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: '#e74c3c',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '8px 16px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '14px',
+          }}
+        >
+          🚪 Logout
+        </button>
+      </div>
 
       {error && (
         <div style={{

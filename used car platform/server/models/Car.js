@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const carSchema = new mongoose.Schema(
   {
     name:       { type: String, required: true },
+    brand:      { type: String, required: true },
     price:      { type: Number, required: true },         
     photo:      { type: String },                         
     ownerId:    {
@@ -46,6 +47,7 @@ const carSchema = new mongoose.Schema(
 
 // Database indexes for optimized queries
 carSchema.index({ ownerId: 1 });
+carSchema.index({ brand: 1 });
 carSchema.index({ price: 1, modelYear: -1 });
 carSchema.index({ modelYear: 1 });
 carSchema.index({ kmsDriven: 1 });
