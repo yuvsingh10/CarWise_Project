@@ -5,9 +5,20 @@ import api from '../services/api';
 const Navbar = () => {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [adminRole, setAdminRole] = useState(null); // 'admin' or 'superadmin'
 
   useEffect(() => {
     fetchUnreadCount();
+    // Check admin role
+    const superAdminToken = localStorage.getItem('superAdminToken');
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (superAdminToken) {
+      setAdminRole('superadmin');
+    } else if (adminToken) {
+      setAdminRole('admin');
+    }
+
     const interval = setInterval(fetchUnreadCount, 10000); // Check every 10 seconds
     return () => clearInterval(interval);
   }, []);
@@ -24,6 +35,11 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('admin');
+    localStorage.removeItem('superAdminToken');
+    localStorage.removeItem('superAdmin');
+    setAdminRole(null);
     navigate('/login');
   };
 
@@ -71,10 +87,22 @@ const Navbar = () => {
         )}
       </Link>
       
+      {/* Show Admin or SuperAdmin button based on role */}
+      {adminRole === 'superadmin' && (
+        <Link to="/superadmin" style={{ color: '#fff', textDecoration: 'none', marginLeft: 'auto', background: '#ff9800', padding: '5px 12px', borderRadius: '4px' }}>
+          👑 SuperAdmin
+        </Link>
+      )}
+      {adminRole === 'admin' && (
+        <Link to="/admin" style={{ color: '#fff', textDecoration: 'none', marginLeft: 'auto', background: '#ff6b6b', padding: '5px 12px', borderRadius: '4px' }}>
+          👨‍💼 Admin
+        </Link>
+      )}
+      
       <button
         onClick={handleLogout}
         style={{
-          marginLeft: 'auto',
+          marginLeft: adminRole ? '10px' : 'auto',
           background: 'transparent',
           border: '1px solid #fff',
           borderRadius: 4,

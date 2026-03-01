@@ -6,8 +6,17 @@ const API = axios.create({
 
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Check tokens in order of priority: superadmin -> admin -> user
+  const superAdminToken = localStorage.getItem('superAdminToken');
+  const adminToken = localStorage.getItem('adminToken');
+  const userToken = localStorage.getItem('token');
+  
+  // Use the first available token (priority order)
+  const token = superAdminToken || adminToken || userToken;
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 

@@ -29,6 +29,23 @@ const userSchema = new mongoose.Schema({
       ref: 'Car'
     }
   ],
+  isAdmin: {
+    type: Boolean,
+    default: false,
+    select: false, // Don't include in queries by default
+  },
+  isSuspended: {
+    type: Boolean,
+    default: false,
+  },
+  suspensionReason: {
+    type: String,
+    default: '',
+  },
+  suspendedAt: {
+    type: Date,
+    default: null,
+  },
 }, { timestamps: true });
 
 // Database indexes for optimized queries

@@ -7,6 +7,9 @@ const authRoutes = require('./routes/authRoutes');
 const carRoutes = require('./routes/carRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const ratingRoutes = require('./routes/ratingRoutes');
+const superAdminAuthRoutes = require('./routes/superAdminAuthRoutes');
+const adminAuthRoutes = require('./routes/adminAuthRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 app.use(cors());
@@ -36,6 +39,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cars', carRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/superadmin-auth', superAdminAuthRoutes);
+app.use('/api/admin-auth', adminAuthRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('Used Car Platform API running');

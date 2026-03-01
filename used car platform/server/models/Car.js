@@ -24,6 +24,22 @@ const carSchema = new mongoose.Schema(
         ref: 'User'
       }
     ],
+    isRemoved: {
+      type: Boolean,
+      default: false,
+    },
+    removalReason: {
+      type: String,
+      default: '',
+    },
+    removedAt: {
+      type: Date,
+      default: null,
+    },
+    removedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
   },
   { timestamps: true }
 );
