@@ -1,5 +1,6 @@
 const Car = require('../models/Car');
 const User = require('../models/User');
+const { cacheKeys, cacheDurations, setCache, getCache, deleteCache, deleteCachePattern } = require('../utils/cache');
 const {
   validatePrice,
   validateModelYear,
@@ -23,8 +24,27 @@ exports.getAllCars = async (req, res) => {
       maxYear = 2100,
       minKms = 0,
       maxKms = 2000000,
-      sortBy = 'newest'
+      sortBy = 'newest',
+      page = 1,
+      limit = 20
     } = req.query;
+
+    // Validate pagination params
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build cache key
+    const cacheKey = cacheKeys.allCars({
+      minPrice, maxPrice, minYear, maxYear, minKms, maxKms, sortBy, page: pageNum, limit: limitNum
+    });
+
+    // Try to get from cache
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      console.log('⚡ Cache hit for cars list');
+      return res.json(cachedData);
+    }
 
     // Build filter object
     const filters = {
@@ -58,16 +78,38 @@ exports.getAllCars = async (req, res) => {
         sortOption = { modelYear: -1 };
         break;
       case 'favorited':
-        sortOption = { 'favoriteBy': -1 }; // Most favorites first
+        sortOption = { favoriteBy: -1 };
         break;
       default:
-        sortOption = { createdAt: -1 }; // newest
+        sortOption = { createdAt: -1 };
     }
 
-    const cars = await Car.find(filters).sort(sortOption).populate('ownerId', 'name email phone');
-    
-    console.log(`🔍 Filtered cars: ${cars.length} results (price: ${minPrice}-${maxPrice}, year: ${minYear}-${maxYear}, kms: ${minKms}-${maxKms}, sort: ${sortBy})`);
-    res.json(cars);
+    // Get total count for pagination
+    const total = await Car.countDocuments(filters);
+
+    // Fetch paginated results
+    const cars = await Car.find(filters)
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limitNum)
+      .populate('ownerId', 'name email phone')
+      .lean(); // Use lean for faster queries
+
+    const responseData = {
+      cars,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalCars: total,
+        carsPerPage: limitNum
+      }
+    };
+
+    // Cache the result
+    await setCache(cacheKey, responseData, cacheDurations.carsList);
+
+    console.log(`🔍 Filtered cars: ${cars.length} results (page ${pageNum}/${Math.ceil(total / limitNum)})`);
+    res.json(responseData);
   } catch (err) {
     console.error('Get all cars error:', err.message);
     res.status(500).json({ message: '❌ Failed to load cars. Please refresh and try again.' });
@@ -179,6 +221,10 @@ exports.createCar = async (req, res) => {
     await User.findByIdAndUpdate(req.user.id, {
       $push: { carListings: newCar._id }
     });
+
+    // Invalidate cache
+    await deleteCachePattern('cars:all:*');
+    await deleteCache(cacheKeys.userCars(req.user.id));
 
     console.log('✅ Car created successfully:', newCar._id);
     res.status(201).json({ message: '✅ Car listed successfully!', car: newCar });
@@ -292,6 +338,12 @@ exports.updateCar = async (req, res) => {
     }
 
     const updated = await Car.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    
+    // Invalidate cache
+    await deleteCachePattern('cars:all:*');
+    await deleteCache(cacheKeys.carById(req.params.id));
+    await deleteCache(cacheKeys.userCars(req.user.id));
+
     console.log('✅ Car updated successfully:', updated._id);
     res.json({ message: '✅ Car listing updated successfully!', car: updated });
   } catch (err) {
@@ -324,6 +376,11 @@ exports.deleteCar = async (req, res) => {
     await User.findByIdAndUpdate(req.user.id, {
       $pull: { carListings: car._id }
     });
+
+    // Invalidate cache
+    await deleteCachePattern('cars:all:*');
+    await deleteCache(cacheKeys.userCars(req.user.id));
+    await deleteCache(cacheKeys.carById(car._id));
 
     console.log('✅ Car deleted successfully:', car._id);
     res.json({ message: '✅ Car listing deleted successfully!' });

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
+import LazyImage from '../components/LazyImage';
 
 
 const Sidebar = ({ isOpen, toggleSidebar, handleLogout, navigate, unreadCount }) => {
@@ -161,6 +162,9 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCars, setTotalCars] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const [filters, setFilters] = useState({
     fuelType: '',
@@ -224,7 +228,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchCars = async () => {
       try {
-        // Build query parameters
+        setLoading(true);
+        // Build query parameters with pagination
         const params = new URLSearchParams({
           minPrice: priceRange.min,
           maxPrice: priceRange.max,
@@ -232,20 +237,28 @@ const Dashboard = () => {
           maxYear: yearRange.max,
           minKms: kmsRange.min,
           maxKms: kmsRange.max,
-          sortBy: sortBy
+          sortBy: sortBy,
+          page: currentPage,
+          limit: 20
         });
 
         const response = await API.get(`/cars?${params}`);
         console.log('🚗 Fetched cars from database:', response.data);
-        setCars(response.data);
+        setCars(response.data.cars || []);
+        setTotalPages(response.data.pagination?.totalPages || 1);
+        setTotalCars(response.data.pagination?.totalCars || 0);
       } catch (err) {
         console.error('❌ Failed to fetch cars:', err.message);
         setCars([]);
+        setTotalPages(1);
+        setTotalCars(0);
+      } finally {
+        setLoading(false);
       }
     };
     
     fetchCars();
-  }, [priceRange, yearRange, kmsRange, sortBy]);
+  }, [priceRange, yearRange, kmsRange, sortBy, currentPage]);
 
   // Save filters to localStorage whenever they change
   useEffect(() => {
@@ -275,9 +288,9 @@ const Dashboard = () => {
 
   if (!user) return <p>Loading…</p>;
 
-  
-  const otherUsersCars = cars
-    .filter((c) => c.ownerId._id !== user.id) // ownerId is now an object with _id
+  // Filter cars based on additional client-side filters
+  const filteredCars = cars
+    .filter((c) => c.ownerId._id !== user.id)
     .filter((c) => (filters.fuelType ? c.fuelType === filters.fuelType : true))
     .filter((c) => (filters.transmission ? c.transmission === filters.transmission : true))
     .filter((c) => (filters.ownership ? String(c.ownership) === filters.ownership : true))
@@ -300,10 +313,8 @@ const Dashboard = () => {
   };
 
   // Pagination logic
-  const itemsPerPage = 12;
-  const totalPages = Math.ceil(otherUsersCars.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedCars = otherUsersCars.slice(startIndex, startIndex + itemsPerPage);
+  const itemsPerPage = 20;
+  const displayedCars = filteredCars;
 
   return (
     <>
@@ -691,7 +702,33 @@ const Dashboard = () => {
             🔄 Clear All Filters
           </button>
 
-          {otherUsersCars.length === 0 && (
+          {loading && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '60px 20px',
+              color: 'rgba(255, 255, 255, 0.8)',
+            }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                border: '4px solid rgba(255, 255, 255, 0.2)',
+                borderTop: '4px solid #64b5f6',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+              }} />
+              <p style={{marginTop: '20px'}}>Loading cars...</p>
+              <style>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          )}
+
+          {!loading && filteredCars.length === 0 && (
             <p style={{ 
               marginTop: '40px', 
               fontStyle: 'italic',
@@ -702,8 +739,22 @@ const Dashboard = () => {
             </p>
           )}
 
+          {!loading && filteredCars.length > 0 && (
+            <div style={{
+              marginTop: '20px',
+              padding: '12px 20px',
+              background: 'rgba(100, 181, 246, 0.15)',
+              borderRadius: '8px',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: '14px',
+            }}>
+              Showing {filteredCars.length} of {totalCars} cars • Page {currentPage} of {totalPages}
+            </div>
+          )}
+
           {/* Car Grid */}
-          <div
+          {!loading && (
+            <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
@@ -711,7 +762,7 @@ const Dashboard = () => {
               marginTop: '20px',
             }}
           >
-            {paginatedCars.map((car) => {
+            {displayedCars.map((car) => {
               const isFavorited = car.favoriteBy && car.favoriteBy.includes(user?.id);
               
               return (
@@ -778,7 +829,7 @@ const Dashboard = () => {
                   {isFavorited ? '❤️' : '🤍'}
                 </button>
 
-                <img
+                <LazyImage
                   src={
                     (car.photos && car.photos[0]) ||
                     car.photo ||
@@ -820,6 +871,7 @@ const Dashboard = () => {
               );
             })}
           </div>
+          )}
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
@@ -931,21 +983,6 @@ const Dashboard = () => {
               </button>
             </div>
           )}
-
-          <div
-            style={{
-              textAlign: 'center',
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: '13px',
-              marginBottom: '20px',
-            }}
-          >
-            {otherUsersCars.length > 0 && (
-              <p>
-                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, otherUsersCars.length)} of {otherUsersCars.length} cars
-              </p>
-            )}
-          </div>
         </div>
       </div>
     </>

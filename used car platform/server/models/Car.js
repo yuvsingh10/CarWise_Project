@@ -28,4 +28,14 @@ const carSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Database indexes for optimized queries
+carSchema.index({ ownerId: 1 });
+carSchema.index({ price: 1, modelYear: -1 });
+carSchema.index({ modelYear: 1 });
+carSchema.index({ kmsDriven: 1 });
+carSchema.index({ favoriteBy: 1 });
+carSchema.index({ createdAt: -1 });
+carSchema.index({ name: 'text', description: 'text' }); // Full-text search index
+carSchema.index({ price: 1, modelYear: 1, kmsDriven: 1 }); // Compound index for filters
+
 module.exports = mongoose.model('Car', carSchema);

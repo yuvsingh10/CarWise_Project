@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
+import RatingsDisplay from '../components/RatingsDisplay';
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -233,6 +234,18 @@ const Profile = () => {
           </button>
         </div>
       </div>
+
+      {/* Seller Ratings Section */}
+      {user && (
+        <div style={{
+          maxWidth: '900px',
+          margin: '40px auto 0',
+          padding: '0 20px',
+          width: '100%',
+        }}>
+          <RatingsDisplay userId={user.id} />
+        </div>
+      )}
     </div>
   );
 };

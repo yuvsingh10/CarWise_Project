@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import RatingsDisplay from '../components/RatingsDisplay';
+import RatingForm from '../components/RatingForm';
 
 const CarDetails = () => {
   const location = useLocation();
@@ -12,6 +14,7 @@ const CarDetails = () => {
   const [messageModalOpen, setMessageModalOpen] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showRatingForm, setShowRatingForm] = useState(false);
 
   
   const [liked, setLiked] = useState(false);
@@ -200,6 +203,57 @@ const CarDetails = () => {
           <DetailRow label="Kms Driven:" value={car.kmsDriven} />
           <DetailRow label="Ownership:" value={car.ownership} />
           <DetailRow label="Seats:" value={car.seats} />
+        </div>
+
+        {/* Seller Ratings Section */}
+        <div style={{ marginTop: 30, padding: '20px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px' }}>
+          <h3 style={{ 
+            color: '#64b5f6', 
+            marginTop: 0, 
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '18px'
+          }}>
+            ⭐ Seller Reviews
+          </h3>
+          <RatingsDisplay userId={car.ownerId._id} />
+          
+          {/* Rating Form Toggle Button */}
+          <button
+            onClick={() => setShowRatingForm(!showRatingForm)}
+            style={{
+              marginTop: '20px',
+              padding: '10px 20px',
+              backgroundColor: '#667eea',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '14px',
+              transition: 'background-color 0.3s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#5568d3')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#667eea')}
+          >
+            {showRatingForm ? 'Cancel' : '✏️ Rate this Seller'}
+          </button>
+
+          {/* Rating Form */}
+          {showRatingForm && (
+            <div style={{ marginTop: '20px' }}>
+              <RatingForm
+                sellerId={car.ownerId._id}
+                carId={car._id}
+                onRatingSubmitted={() => {
+                  setShowRatingForm(false);
+                }}
+                onCancel={() => setShowRatingForm(false)}
+              />
+            </div>
+          )}
         </div>
 
         <div style={{ marginTop: 30, display: 'flex', alignItems: 'center', gap: '12px' }}>
